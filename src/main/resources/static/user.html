@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ETS - User Location Tracking</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCelDo4I5cPQ72TfCTQW-arhPZ7ALNcp8w&libraries=places"></script>
+    <script src="https://unpkg.com/polyline-encoded"></script>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .connection-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+        
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        #map {
+            height: 500px;
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e7f3fe;
+            border-left: 5px solid #2196F3;
+            border-radius: 4px;
+        }
+        
+        .ride-info {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .info-card {
+            flex: 1;
+            min-width: 200px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .info-card h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .info-card p {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+            color: #2196F3;
+        }
+        
+        .info-card.arrived {
+            border-top: 4px solid #FF9800;
+        }
+        
+        .info-card.picked-up {
+            border-top: 4px solid #4CAF50;
+        }
+        
+        .info-card.dropped {
+            border-top: 4px solid #9C27B0;
+        }
+        
+        .otp-section {
+            margin-top: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 15px;
+            text-align: center;
+            display: none;
+        }
+        
+        .otp-section h3 {
+            margin-top: 0;
+        }
+        
+        .otp-value {
+            font-size: 32px;
+            letter-spacing: 5px;
+            font-weight: bold;
+            color: #FF5722;
+            margin: 15px 0;
+        }
+        
+        .btn-generate-otp {
+            background-color: #FF5722;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .btn-generate-otp:hover {
+            background-color: #E64A19;
+        }
+        
+        .pac-container {
+            z-index: 1051 !important;
+        }
+        
+        .location-selector {
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .location-toggle {
+            display: inline-flex;
+            background-color: #f5f5f5;
+            border-radius: 25px;
+            padding: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .location-btn {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: none;
+            background-color: transparent;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .location-btn.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ETS - User Location Tracking</h1>
+        </div>
+        
+        <div class="connection-form">
+            <div class="form-group">
+                <label for="userId">User ID:</label>
+                <input type="text" id="userId" placeholder="Enter your User ID">
+            </div>
+            
+            <div class="form-group">
+                <label for="slotId">Slot ID:</label>
+                <input type="text" id="slotId" placeholder="Enter your Slot ID">
+            </div>
+            
+            <div class="form-group">
+                <label for="pickupLocation">Pickup Location:</label>
+                <input type="text" id="pickupLocation" placeholder="Enter pickup location">
+            </div>
+            
+            <div class="form-group">
+                <label for="dropLocation">Drop Location:</label>
+                <input type="text" id="dropLocation" placeholder="Enter drop location">
+            </div>
+            
+            <div class="form-group" style="display: flex; align-items: flex-end;">
+                <button id="connectBtn">Connect</button>
+            </div>
+        </div>
+        
+        <div class="status" id="connectionStatus">
+            Not connected
+        </div>
+        
+        <div class="ride-info" id="rideInfoSection" style="display: none;">
+            <div class="info-card">
+                <h3>Driver Status</h3>
+                <p id="rideStatus">PENDING</p>
+            </div>
+            <div class="info-card">
+                <h3>Distance to Pickup</h3>
+                <p id="distanceToPickup">0.0 km</p>
+            </div>
+            <div class="info-card">
+                <h3>ETA to Pickup</h3>
+                <p id="etaToPickup">0 min</p>
+            </div>
+            <div class="info-card">
+                <h3>Total Ride Distance</h3>
+                <p id="totalDistance">0.0 km</p>
+            </div>
+            <div class="info-card">
+                <h3>Estimated Ride Time</h3>
+                <p id="estimatedRideTime">0 min</p>
+            </div>
+        </div>
+        
+        <div class="otp-section" id="otpSection">
+            <h3>Share this OTP with your driver</h3>
+            <div class="otp-value" id="otpValue">----</div>
+            <p>Ask your driver to enter this code to verify pickup</p>
+            <button class="btn-generate-otp" id="generateOtpBtn">Generate New OTP</button>
+        </div>
+        
+        <div id="map"></div>
+    </div>
+
+    <script>
+        // Map initialization
+        let map;
+        let userMarker;
+        let driverMarker;
+        let pickupMarker;
+        let dropMarker;
+        let locationUpdateInterval;
+        let driverCheckInterval;
+        let userId, slotId, pickupLocation, dropLocation;
+        let pickupLat = 0, pickupLng = 0, dropLat = 0, dropLng = 0;
+        let connected = false;
+        let currentOTP = "";
+        
+        // Initialize map
+        function initMap() {
+            map = L.map('map').setView([20.5937, 78.9629], 5); // Default center of India
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            // Custom car icon for driver
+            const carIcon = L.icon({
+                iconUrl: 'https://cdn-icons-png.flaticon.com/512/3097/3097144.png',
+                iconSize: [40, 40],
+                iconAnchor: [20, 20],
+                popupAnchor: [0, -20]
+            });
+            
+            // Custom pickup marker icon
+            const pickupIcon = L.icon({
+                iconUrl: 'https://cdn-icons-png.flaticon.com/512/484/484167.png',
+                iconSize: [30, 30],
+                iconAnchor: [15, 30],
+                popupAnchor: [0, -30]
+            });
+            
+            // Custom drop marker icon
+            const dropIcon = L.icon({
+                iconUrl: 'https://cdn-icons-png.flaticon.com/512/1076/1076337.png',
+                iconSize: [30, 30],
+                iconAnchor: [15, 30],
+                popupAnchor: [0, -30]
+            });
+            
+            // Create marker for driver (initially hidden)
+            driverMarker = L.marker([0, 0], {icon: carIcon}).addTo(map);
+            driverMarker.setOpacity(0); // Hide until we receive driver location
+            
+            // Create marker for user's current location
+            userMarker = L.marker([0, 0]).addTo(map);
+            userMarker.setOpacity(0); // Hide until we get user location
+            
+            // Create marker for pickup location (initially hidden)
+            pickupMarker = L.marker([0, 0], {icon: pickupIcon}).addTo(map);
+            pickupMarker.setOpacity(0);
+            
+            // Create marker for drop location (initially hidden)
+            dropMarker = L.marker([0, 0], {icon: dropIcon}).addTo(map);
+            dropMarker.setOpacity(0);
+
+            // Add selection mode toggle for map clicks
+            const locationSelector = document.createElement('div');
+            locationSelector.className = 'location-selector';
+            locationSelector.innerHTML = `
+                <div class="location-toggle">
+                    <button id="pickupToggle" class="location-btn active">Set Pickup</button>
+                    <button id="dropToggle" class="location-btn">Set Drop</button>
+                </div>
+            `;
+            document.querySelector('.connection-form').after(locationSelector);
+            
+            // Default selection mode is pickup
+            let mapClickMode = 'pickup';
+            
+            // Add event listeners for toggle buttons
+            document.getElementById('pickupToggle').addEventListener('click', function() {
+                mapClickMode = 'pickup';
+                document.getElementById('pickupToggle').classList.add('active');
+                document.getElementById('dropToggle').classList.remove('active');
+            });
+            
+            document.getElementById('dropToggle').addEventListener('click', function() {
+                mapClickMode = 'drop';
+                document.getElementById('dropToggle').classList.add('active');
+                document.getElementById('pickupToggle').classList.remove('active');
+            });
+            
+            // Add map click listener to set location based on current mode
+            map.on('click', function(e) {
+                const lat = e.latlng.lat;
+                const lng = e.latlng.lng;
+                
+                if (mapClickMode === 'pickup') {
+                    // Set pickup location
+                    pickupLat = lat;
+                    pickupLng = lng;
+                    pickupMarker.setLatLng([lat, lng]);
+                    pickupMarker.setOpacity(1);
+                    
+                    // Reverse geocode to get address and update input field
+                    reverseGeocode(lat, lng, function(address) {
+                        document.getElementById('pickupLocation').value = address;
+                        pickupLocation = address; // Update the variable as well
+                        pickupMarker.bindPopup("Pickup: " + address).openPopup();
+                        if (dropLat !== 0 && dropLng !== 0) {
+                            drawRoute();
+                        }
+                    });
+                } else {
+                    // Set drop location
+                    dropLat = lat;
+                    dropLng = lng;
+                    dropMarker.setLatLng([lat, lng]);
+                    dropMarker.setOpacity(1);
+                    
+                    // Reverse geocode to get address and update input field
+                    reverseGeocode(lat, lng, function(address) {
+                        document.getElementById('dropLocation').value = address;
+                        dropLocation = address; // Update the variable as well
+                        dropMarker.bindPopup("Drop: " + address).openPopup();
+                        if (pickupLat !== 0 && pickupLng !== 0) {
+                            drawRoute();
+                        }
+                    });
+                }
+            });
+        }
+        
+        // Start location tracking
+        function connect() {
+            userId = document.getElementById('userId').value.trim();
+            slotId = document.getElementById('slotId').value.trim();
+            pickupLocation = document.getElementById('pickupLocation').value.trim();
+            dropLocation = document.getElementById('dropLocation').value.trim();
+            
+            // Validate inputs
+            if (!userId || !slotId || !pickupLocation || !dropLocation) {
+                updateStatus('Please fill in all fields', 'error');
+                return;
+            }
+            
+            connected = true;
+            updateStatus('Connected! Waiting for driver...', 'success');
+            
+            // Show ride info section
+            document.getElementById('rideInfoSection').style.display = 'flex';
+            
+            // Get user's current location and start sending updates
+            getUserLocation();
+            startLocationUpdates();
+            
+            // Disable the connect button to prevent multiple connections
+            document.getElementById('connectBtn').disabled = true;
+            
+            // Initialize pickup and drop location markers
+            geocodeAddress(pickupLocation, function(lat, lng) {
+                pickupLat = lat;
+                pickupLng = lng;
+                pickupMarker.setLatLng([lat, lng]);
+                pickupMarker.bindPopup("Pickup: " + pickupLocation);
+                pickupMarker.setOpacity(1);
+            });
+            
+            geocodeAddress(dropLocation, function(lat, lng) {
+                dropLat = lat;
+                dropLng = lng;
+                dropMarker.setLatLng([lat, lng]);
+                dropMarker.bindPopup("Drop: " + dropLocation);
+                dropMarker.setOpacity(1);
+                
+                // Adjust map to show all markers and draw route
+                if (pickupLat !== 0 && pickupLng !== 0) {
+                    const bounds = L.latLngBounds([userMarker.getLatLng(), pickupMarker.getLatLng(), dropMarker.getLatLng()]);
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                    drawRoute(); 
+                }
+            });
+            
+            // Setup OTP generation button
+            document.getElementById('generateOtpBtn').addEventListener('click', generateOTP);
+        }
+        
+        // Geocode address to get coordinates
+        function geocodeAddress(address, callback) {
+            const geocoder = new google.maps.Geocoder();
+            
+            geocoder.geocode({ 'address': address }, function(results, status) {
+                if (status === google.maps.GeocoderStatus.OK) {
+                    const lat = results[0].geometry.location.lat();
+                    const lng = results[0].geometry.location.lng();
+                    callback(lat, lng);
+                } else {
+                    console.error("Geocoding failed: " + status);
+                    updateStatus('Could not find address: ' + address, 'error');
+                    // Use a default position if geocoding fails
+                    // callback(20.5937, 78.9629); // Default to center of India
+                }
+            });
+        }
+        
+        // Draw route between pickup and drop locations
+        function drawRoute() {
+            if (pickupLat === 0 || pickupLng === 0 || dropLat === 0 || dropLng === 0) {
+                return; // Don't draw if we don't have both locations
+            }
+            
+            // Remove any existing route lines
+            if (window.routeLine) {
+                map.removeLayer(window.routeLine);
+            }
+            
+            // Get route using OpenStreetMap Directions API (via OSRM)
+            $.ajax({
+                url: `https://router.project-osrm.org/route/v1/driving/${pickupLng},${pickupLat};${dropLng},${dropLat}?overview=full&geometries=polyline`,
+                type: 'GET',
+                success: function(data) {
+                    if (data.routes && data.routes.length > 0) {
+                        // Decode the polyline
+                        const polyline = L.Polyline.fromEncoded(data.routes[0].geometry);
+                        const coordinates = polyline.getLatLngs();
+                        
+                        // Create a polyline with the coordinates
+                        window.routeLine = L.polyline(coordinates, {
+                            color: '#4CAF50',
+                            weight: 5,
+                            opacity: 0.7,
+                            lineJoin: 'round'
+                        }).addTo(map);
+                        
+                        // Update estimated distance and time if available
+                        if (data.routes[0].distance && data.routes[0].duration) {
+                            const distance = (data.routes[0].distance / 1000).toFixed(1); // km
+                            const duration = Math.ceil(data.routes[0].duration / 60); // minutes
+                            
+                            document.getElementById('totalDistance').textContent = distance + ' km';
+                            document.getElementById('estimatedRideTime').textContent = duration + ' min';
+                        }
+                        
+                        // Adjust map to show the entire route
+                        map.fitBounds(window.routeLine.getBounds(), { padding: [50, 50] });
+                    } else {
+                        // Fallback to straight line if route service fails
+                        drawFallbackRoute();
+                    }
+                },
+                error: function() {
+                    // Fallback to straight line if API call fails
+                    drawFallbackRoute();
+                }
+            });
+        }
+        
+        // Draw a simple straight line as fallback
+        function drawFallbackRoute() {
+            window.routeLine = L.polyline([
+                [pickupLat, pickupLng],
+                [dropLat, dropLng]
+            ], {
+                color: '#4CAF50',
+                weight: 5,
+                opacity: 0.7,
+                dashArray: '10, 10',
+                lineJoin: 'round'
+            }).addTo(map);
+            
+            // Calculate straight-line distance
+            const distance = map.distance(
+                [pickupLat, pickupLng],
+                [dropLat, dropLng]
+            ) / 1000; // Convert to km
+            
+            // Estimate time (assuming 40 km/h average speed)
+            const duration = Math.ceil((distance / 40) * 60); // minutes
+            
+            document.getElementById('totalDistance').textContent = distance.toFixed(1) + ' km';
+            document.getElementById('estimatedRideTime').textContent = duration + ' min';
+            
+            // Adjust map to show both points
+            map.fitBounds([
+                [pickupLat, pickupLng],
+                [dropLat, dropLng]
+            ], { padding: [50, 50] });
+        }
+
+        // Reverse geocode coordinates to get address
+        function reverseGeocode(lat, lng, callback) {
+            const geocoder = new google.maps.Geocoder();
+            const latlng = { lat: parseFloat(lat), lng: parseFloat(lng) };
+            geocoder.geocode({ location: latlng }, function(results, status) {
+                if (status === google.maps.GeocoderStatus.OK) {
+                    if (results[0]) {
+                        callback(results[0].formatted_address);
+                    } else {
+                        console.error('No results found for reverse geocoding');
+                        callback('Unknown location');
+                    }
+                } else {
+                    console.error('Reverse geocoding failed due to: ' + status);
+                    callback('Unknown location');
+                }
+            });
+        }
+        
+        // Get user's current location
+        function getUserLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        
+                        // Update user marker
+                        userMarker.setLatLng([lat, lng]);
+                        userMarker.setOpacity(1);
+                        userMarker.bindPopup("Your current location").openPopup();
+                        
+                        // Center map on user location
+                        map.setView([lat, lng], 14);
+                        
+                        // Always use current location as default pickup location when starting up
+                        // This ensures we have a default pickup location ready
+                        pickupLat = lat;
+                        pickupLng = lng;
+                        const pickupInput = document.getElementById('pickupLocation');
+                        
+                        reverseGeocode(lat, lng, function(address) {
+                            pickupInput.value = address;
+                            pickupLocation = address; // Update variable
+                            pickupMarker.setLatLng([lat, lng]);
+                            pickupMarker.bindPopup("Pickup: " + address).openPopup();
+                            pickupMarker.setOpacity(1);
+                            
+                            // If drop location is already set (unlikely on startup), draw route
+                            if (dropLat !== 0 && dropLng !== 0) {
+                                drawRoute();
+                            }
+                        });
+                        
+                        // Send initial location update
+                        sendUserLocation(lat, lng);
+                    },
+                    function(error) {
+                        console.error("Error getting location:", error);
+                        updateStatus('Unable to get your location. Please enable location services.', 'error');
+                    }
+                );
+            } else {
+                updateStatus('Geolocation is not supported by this browser.', 'error');
+            }
+        }
+
+        // Start periodic location updates
+        function startLocationUpdates() {
+            // Clear any existing intervals
+            if (locationUpdateInterval) clearInterval(locationUpdateInterval);
+            if (driverCheckInterval) clearInterval(driverCheckInterval);
+            
+            // Set interval for sending user location updates
+            locationUpdateInterval = setInterval(function() {
+                if (connected && navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        function(position) {
+                            sendUserLocation(position.coords.latitude, position.coords.longitude);
+                        },
+                        function(error) {
+                            console.error("Error getting location for update:", error);
+                        }
+                    );
+                }
+            }, 5000); // Update every 5 seconds
+            
+            // Set interval for checking driver location
+            driverCheckInterval = setInterval(function() {
+                if (connected) {
+                    checkDriverLocation();
+                }
+            }, 3000); // Check every 3 seconds
+        }
+        
+        // Send user location update
+        function sendUserLocation(lat, lng) {
+            if (!connected) return;
+            
+            const locationData = {
+                userId: userId,
+                driverId: '',
+                slotId: slotId,
+                latitude: lat,
+                longitude: lng,
+                pickupLocation: pickupLocation,
+                dropLocation: dropLocation,
+                pickupLatitude: pickupLat,
+                pickupLongitude: pickupLng,
+                dropLatitude: dropLat,
+                dropLongitude: dropLng,
+                messageType: "USER_LOCATION"
+            };
+            
+            $.ajax({
+                url: '/api/location/user/update',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(locationData),
+                success: function(response) {
+                    // Update user marker
+                    userMarker.setLatLng([lat, lng]);
+                    userMarker.setOpacity(1);
+                    
+                    // If driver location is included in the response, update the driver marker
+                    if (response.driverLocation) {
+                        handleDriverLocationUpdate(response.driverLocation);
+                        
+                        // Update ride info
+                        updateRideInfo(response);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error sending location update:", error);
+                    updateStatus('Error updating location. Please try again.', 'error');
+                }
+            });
+        }
+        
+        // Check for driver location updates
+        function checkDriverLocation() {
+            $.ajax({
+                url: '/api/location/driver/' + slotId,
+                type: 'GET',
+                success: function(driverLocation) {
+                    if (driverLocation) {
+                        handleDriverLocationUpdate(driverLocation);
+                        
+                        // Check for ride status changes
+                        updateRideStatus(driverLocation.rideStatus);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    // 404 is expected if no driver is assigned yet
+                    if (xhr.status !== 404) {
+                        console.error("Error checking driver location:", error);
+                    }
+                }
+            });
+        }
+        
+        // Handle driver location update
+        function handleDriverLocationUpdate(driverLocation) {
+            const lat = driverLocation.latitude;
+            const lng = driverLocation.longitude;
+            
+            // Update driver marker
+            driverMarker.setLatLng([lat, lng]);
+            driverMarker.setOpacity(1);
+            driverMarker.bindPopup("Driver ID: " + driverLocation.driverId).openPopup();
+            
+            updateStatus('Driver location updated', 'info');
+        }
+        
+        // Update ride information displays
+        function updateRideInfo(response) {
+            // Update distance and time info
+            if (response.distanceToPickup) {
+                document.getElementById('distanceToPickup').textContent = 
+                    response.distanceToPickup.toFixed(1) + ' km';
+            }
+            
+            if (response.estimatedTimeToPickup) {
+                document.getElementById('etaToPickup').textContent = 
+                    response.estimatedTimeToPickup + ' min';
+            }
+            
+            if (response.totalRideDistance) {
+                document.getElementById('totalDistance').textContent = 
+                    response.totalRideDistance.toFixed(1) + ' km';
+            }
+            
+            if (response.estimatedRideTime) {
+                document.getElementById('estimatedRideTime').textContent = 
+                    response.estimatedRideTime + ' min';
+            }
+            
+            // Update ride status if available
+            if (response.rideStatus) {
+                updateRideStatus(response.rideStatus);
+            }
+        }
+        
+        // Update ride status and UI accordingly
+        function updateRideStatus(status) {
+            if (!status) return;
+            
+            const statusElement = document.getElementById('rideStatus');
+            statusElement.textContent = status;
+            
+            // Show/hide OTP section based on status
+            const otpSection = document.getElementById('otpSection');
+            
+            // Adjust UI based on ride status
+            switch (status) {
+                case 'PENDING':
+                    statusElement.style.color = '#2196F3';
+                    otpSection.style.display = 'none';
+                    break;
+                    
+                case 'ARRIVED':
+                    statusElement.style.color = '#FF9800';
+                    otpSection.style.display = 'block';
+                    // Generate OTP automatically when driver arrives
+                    if (!currentOTP) generateOTP();
+                    updateStatus('Driver has arrived! Share the OTP to start your ride.', 'success');
+                    break;
+                    
+                case 'PICKED_UP':
+                    statusElement.style.color = '#4CAF50';
+                    otpSection.style.display = 'none';
+                    updateStatus('Your ride has started!', 'success');
+                    break;
+                    
+                case 'DROPPED':
+                    statusElement.style.color = '#9C27B0';
+                    otpSection.style.display = 'none';
+                    updateStatus('Your ride is complete!', 'success');
+                    break;
+            }
+        }
+        
+        // Generate OTP for verification
+        function generateOTP() {
+            $.ajax({
+                url: '/api/location/generateOTP',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    userId: userId,
+                    slotId: slotId
+                }),
+                success: function(response) {
+                    if (response.status === 'success') {
+                        currentOTP = response.otp;
+                        document.getElementById('otpValue').textContent = currentOTP;
+                        updateStatus('OTP generated successfully', 'success');
+                    } else {
+                        updateStatus('Failed to generate OTP: ' + response.message, 'error');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error generating OTP:", error);
+                    updateStatus('Error generating OTP. Please try again.', 'error');
+                }
+            });
+        }
+        
+        // Update status message
+        function updateStatus(message, type) {
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.textContent = message;
+            
+            // Reset classes
+            statusDiv.className = 'status';
+            
+            // Add style based on message type
+            if (type === 'error') {
+                statusDiv.style.borderLeft = '5px solid #f44336';
+                statusDiv.style.backgroundColor = '#ffebee';
+            } else if (type === 'success') {
+                statusDiv.style.borderLeft = '5px solid #4CAF50';
+                statusDiv.style.backgroundColor = '#e8f5e9';
+            } else {
+                statusDiv.style.borderLeft = '5px solid #2196F3';
+                statusDiv.style.backgroundColor = '#e3f2fd';
+            }
+        }
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            initMap();
+            initPlacesAutocomplete();
+            
+            // Connect button click handler
+            document.getElementById('connectBtn').addEventListener('click', function() {
+                connect();
+            });
+            
+            // Get user's current location on page load to set default pickup location
+            getUserLocation();
+        });
+    </script>
+    
+    <!-- Google Maps Places API for location autocomplete -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCelDo4I5cPQ72TfCTQW-arhPZ7ALNcp8w&libraries=places&callback=initPlacesAutocomplete" async defer></script>
+    <script src="https://unpkg.com/polyline-encoded"></script>
+    
+    <script>
+        function initPlacesAutocomplete() {
+            // Initialize autocomplete for pickup location
+            const pickupInput = document.getElementById('pickupLocation');
+            const pickupAutocomplete = new google.maps.places.Autocomplete(pickupInput);
+            
+            // Add event listener for place selection
+            pickupAutocomplete.addListener('place_changed', function() {
+                const place = pickupAutocomplete.getPlace();
+                if (place.geometry) {
+                    const lat = place.geometry.location.lat();
+                    const lng = place.geometry.location.lng();
+                    pickupLat = lat;
+                    pickupLng = lng;
+                    pickupMarker.setLatLng([lat, lng]);
+                    pickupMarker.setOpacity(1);
+                    pickupMarker.bindPopup("Pickup: " + place.formatted_address).openPopup();
+                    pickupLocation = place.formatted_address;
+                    
+                    // If drop location is set, draw route
+                    if (dropLat !== 0 && dropLng !== 0) {
+                        drawRoute();
+                    }
+                }
+            });
+            
+            // Initialize autocomplete for drop location
+            const dropInput = document.getElementById('dropLocation');
+            const dropAutocomplete = new google.maps.places.Autocomplete(dropInput);
+            
+            // Add event listener for place selection
+            dropAutocomplete.addListener('place_changed', function() {
+                const place = dropAutocomplete.getPlace();
+                if (place.geometry) {
+                    const lat = place.geometry.location.lat();
+                    const lng = place.geometry.location.lng();
+                    dropLat = lat;
+                    dropLng = lng;
+                    dropMarker.setLatLng([lat, lng]);
+                    dropMarker.setOpacity(1);
+                    dropMarker.bindPopup("Drop: " + place.formatted_address).openPopup();
+                    dropLocation = place.formatted_address;
+                    
+                    // If pickup location is set, draw route
+                    if (pickupLat !== 0 && pickupLng !== 0) {
+                        drawRoute();
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
