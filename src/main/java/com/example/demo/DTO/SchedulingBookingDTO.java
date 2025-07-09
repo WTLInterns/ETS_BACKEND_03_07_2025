@@ -4,6 +4,8 @@ package com.example.demo.DTO;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.example.demo.Model.VendorCab;
+
 public class SchedulingBookingDTO {
     private int id;
     private String pickUpLocation;
@@ -20,13 +22,16 @@ public class SchedulingBookingDTO {
     private UserDTO user;
     private List<ScheduleDateBookingDTO> scheduledDates;
 
+    private VendorCabDTO vendorCab;
+
 
     public SchedulingBookingDTO(int id, String pickUpLocation, String dropLocation, String time, String returnTime,
                                 String shiftTime, String bookingType, List<LocalDate> dateOfList, VendorDTO vendor,
-                                VendorDriverDTO vendorDriver, UserDTO user, List<ScheduleDateBookingDTO> scheduledDates, String bookingId) {
+                                VendorDriverDTO vendorDriver, UserDTO user, List<ScheduleDateBookingDTO> scheduledDates, String bookingId,VendorCabDTO vendorCab) {
         this.id = id;
         this.pickUpLocation = pickUpLocation;
         this.dropLocation = dropLocation;
+        this.vendorCab=vendorCab;
         this.time = time;
         this.returnTime = returnTime;
         this.shiftTime = shiftTime;
@@ -172,6 +177,16 @@ public class SchedulingBookingDTO {
 
     public void setBookingId(String bookingId) {
         this.bookingId = bookingId;
+    }
+
+
+    public VendorCabDTO getVendorCab() {
+        return vendorCab;
+    }
+
+
+    public void setVendorCab(VendorCabDTO vendorCab) {
+        this.vendorCab = vendorCab;
     }
 
 

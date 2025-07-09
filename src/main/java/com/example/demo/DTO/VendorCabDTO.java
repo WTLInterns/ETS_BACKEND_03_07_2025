@@ -19,6 +19,10 @@ public class VendorCabDTO {
         this.vehicleNo = vehicleNo;
     }
 
+    public VendorCabDTO(){
+        super();
+    }
+
 
 
     public int getVendorCabId() {
