@@ -1,15 +1,16 @@
 package com.example.demo.Service;
 
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-import com.example.demo.DTO.*;
-import com.example.demo.Service.Location.LocationValidationResult;
-import com.example.demo.Service.Location.LocationValidationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,14 +20,26 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.util.UriUtils;
 
-import com.example.demo.Model.Booking;
+import com.example.demo.DTO.DriverAssignmentResponseDTO;
+import com.example.demo.DTO.DriverSlotsResponseDTO;
+import com.example.demo.DTO.MultiDateAssignmentResponseDTO;
+import com.example.demo.DTO.ScheduleDateBookingDTO;
+import com.example.demo.DTO.SchedulingBookingDTO;
+import com.example.demo.DTO.SlotBookingDTO;
+import com.example.demo.DTO.SlotDTO;
+import com.example.demo.DTO.UserDTO;
+import com.example.demo.DTO.VendorDTO;
+import com.example.demo.DTO.VendorDriverDTO;
 import com.example.demo.Model.CarRentalUser;
 import com.example.demo.Model.ScheduledDate;
 import com.example.demo.Model.SchedulingBooking;
 import com.example.demo.Model.Vendor;
+import com.example.demo.Model.VendorCab;
 import com.example.demo.Model.VendorDriver;
 import com.example.demo.Repository.ScheduleBookingRepository;
 import com.example.demo.Repository.ScheduleDates;
+import com.example.demo.Service.Location.LocationValidationResult;
+import com.example.demo.Service.Location.LocationValidationService;
 
 import jakarta.transaction.Transactional;
 
@@ -827,6 +840,8 @@ public class ScheduleBookingService {
         }
     }
 
+
+
     public enum DriverState {
         AVAILABLE,      // No active slot or slot expired
         SLOT_ACTIVE,    // Has active slot with available capacity
@@ -1015,6 +1030,7 @@ public class ScheduleBookingService {
 
         try {
             String vendorDriverServiceUrl = "https://api.worldtriplink.com/vendorDriver/" + schedulingBooking.getVendorDriverId();
+            System.out.println("VendorDriver URL: " + vendorDriverServiceUrl);
             VendorDriver vendorDriver = restTemplate.getForObject(vendorDriverServiceUrl, VendorDriver.class);
             if (vendorDriver != null) {
                 VendorDriverDTO driverDTO = new VendorDriverDTO();
@@ -1030,7 +1046,7 @@ public class ScheduleBookingService {
         }
 
         try {
-            String userServiceUrl = "https://api.worldtriplink.com/auth/getCarRentalUserById/" + schedulingBooking.getUser().getId();
+            String userServiceUrl = "https://api.worldtriplink.com/auth/getCarRentalUserById/" + schedulingBooking.getCarRentalUserId();
             CarRentalUser user = restTemplate.getForObject(userServiceUrl, CarRentalUser.class);
             if (user != null) {
                 UserDTO userDTO = new UserDTO();
@@ -1236,21 +1252,37 @@ public class ScheduleBookingService {
                 schedulingBookingDTO.setVendorDriver(null);
             }
 
-            try {
-                String userServiceUrl = "https://api.worldtriplink.com/auth/getCarRentalUserById/" + schedulingBooking.getUser().getId();
-                CarRentalUser user = restTemplate.getForObject(userServiceUrl, CarRentalUser.class);
-                if (user != null) {
-                    UserDTO userDTO = new UserDTO();
-                    userDTO.setId(user.getId());
-                    userDTO.setUserName(user.getUserName());
-                    userDTO.setLastName(user.getLastName());
-                    userDTO.setEmail(user.getEmail());
-                    userDTO.setGender(user.getGender());
-                    userDTO.setPhone(user.getPhone());
-                    schedulingBookingDTO.setUser(userDTO);
+            if (schedulingBooking.getCarRentalUserId() != 0) {
+                try {
+                    String userServiceUrl = "https://api.worldtriplink.com/auth/getCarRentalUserById/" + schedulingBooking.getCarRentalUserId();
+                    logger.info("Calling user API: {}", userServiceUrl);
+                    CarRentalUser user = restTemplate.getForObject(userServiceUrl, CarRentalUser.class);
+
+                    if (user != null) {
+                        UserDTO userDTO = new UserDTO();
+                        userDTO.setId(user.getId());
+                        userDTO.setUserName(user.getUserName());
+                        userDTO.setLastName(user.getLastName());
+                        userDTO.setEmail(user.getEmail());
+                        userDTO.setGender(user.getGender());
+                        userDTO.setPhone(user.getPhone());
+                        schedulingBookingDTO.setUser(userDTO);
+
+                        logger.info("User info set successfully for booking {} - User: {}, Phone: {}",
+                                schedulingBooking.getId(),
+                                user.getUserName(),
+                                user.getPhone());
+                    } else {
+                        logger.warn("User API returned null for ID: {}", schedulingBooking.getCarRentalUserId());
+                        schedulingBookingDTO.setUser(null);
+                    }
+                } catch (Exception e) {
+                    logger.error("Error fetching user for ID: {} - {}", schedulingBooking.getCarRentalUserId(), e.getMessage());
+                    schedulingBookingDTO.setUser(null);
                 }
-            } catch (Exception e) {
-                System.out.println("User not found for ID: " + schedulingBooking.getUser().getId());
+            } else {
+                logger.info("No carRentalUserId found for booking {} (carRentalUserId: {})",
+                        schedulingBooking.getId(), schedulingBooking.getCarRentalUserId());
                 schedulingBookingDTO.setUser(null);
             }
 
@@ -1260,6 +1292,145 @@ public class ScheduleBookingService {
                 sdDTO.setDate(sd.getDate());
                 return sdDTO;
             }).toList();
+            schedulingBookingDTO.setScheduledDates(scheduledDateDTOs);
+
+            dtoList.add(schedulingBookingDTO);
+        }
+
+        return dtoList;
+    }
+
+    public List<SchedulingBookingDTO> getAllBookings() {
+        List<SchedulingBooking> bookings = this.scheduleBookingRepository.findAll();
+        List<SchedulingBookingDTO> dtoList = new ArrayList<>();
+
+
+        logger.info("Found {} total bookings", bookings.size());
+
+        for (SchedulingBooking schedulingBooking : bookings) {
+            SchedulingBookingDTO schedulingBookingDTO = new SchedulingBookingDTO();
+            schedulingBookingDTO.setId(schedulingBooking.getId());
+            schedulingBookingDTO.setBookingId(schedulingBooking.getBookId());
+            schedulingBookingDTO.setPickUpLocation(schedulingBooking.getPickUpLocation());
+            schedulingBookingDTO.setDropLocation(schedulingBooking.getDropLocation());
+            schedulingBookingDTO.setTime(schedulingBooking.getTime());
+            schedulingBookingDTO.setReturnTime(schedulingBooking.getReturnTime());
+            schedulingBookingDTO.setShiftTime(schedulingBooking.getShiftTime());
+            schedulingBookingDTO.setBookingType(schedulingBooking.getBookingType());
+
+            // Debug: Log vendorId and vendorDriverId
+            logger.info("Processing booking ID: {}, vendorId: {}, vendorDriverId: {}",
+                    schedulingBooking.getId(), schedulingBooking.getVendorId(), schedulingBooking.getVendorDriverId());
+
+            // Handle Vendor
+            if (schedulingBooking.getVendorId() != null) {
+                try {
+                    String vendorServiceUrl = "https://api.worldtriplink.com/vendors/" + schedulingBooking.getVendorId();
+                    logger.info("Calling vendor API: {}", vendorServiceUrl);
+                    Vendor vendor = restTemplate.getForObject(vendorServiceUrl, Vendor.class);
+
+                    if (vendor != null) {
+                        VendorDTO vendorDTO = new VendorDTO();
+                        vendorDTO.setId(vendor.getId());
+                        vendorDTO.setVendorCompanyName(vendor.getVendorCompanyName());
+                        vendorDTO.setContactNo(vendor.getContactNo());
+                        vendorDTO.setAlternateMobileNo(vendor.getAlternateMobileNo());
+                        vendorDTO.setCity(vendor.getCity());
+                        vendorDTO.setVendorEmail(vendor.getVendorEmail());
+                        schedulingBookingDTO.setVendor(vendorDTO);
+                        logger.info("Vendor info set successfully for booking {}", schedulingBooking.getId());
+                    } else {
+                        logger.warn("Vendor API returned null for ID: {}", schedulingBooking.getVendorId());
+                        schedulingBookingDTO.setVendor(null);
+                    }
+                } catch (Exception e) {
+                    logger.error("Error fetching vendor for ID: {} - {}", schedulingBooking.getVendorId(), e.getMessage());
+                    schedulingBookingDTO.setVendor(null);
+                }
+            } else {
+                logger.info("No vendorId found for booking {}", schedulingBooking.getId());
+                schedulingBookingDTO.setVendor(null);
+            }
+
+            // Handle Vendor Driver
+            if (schedulingBooking.getVendorDriverId() != 0) {
+                try {
+                    String vendorDriverServiceUrl = "https://api.worldtriplink.com/vendorDriver/" + schedulingBooking.getVendorDriverId();
+                    logger.info("Calling vendor driver API: {}", vendorDriverServiceUrl);
+                    VendorDriver vendorDriver = restTemplate.getForObject(vendorDriverServiceUrl, VendorDriver.class);
+
+                    if (vendorDriver != null) {
+                        VendorDriverDTO driverDTO = new VendorDriverDTO();
+
+                        // Use the booking's vendorDriverId since the response field might be null
+                        driverDTO.setVendorDriverId(schedulingBooking.getVendorDriverId());
+                        driverDTO.setDriverName(vendorDriver.getDriverName());
+                        driverDTO.setContactNo(vendorDriver.getContactNo());
+                        driverDTO.setAltContactNo(vendorDriver.getAltContactNo());
+                        schedulingBookingDTO.setVendorDriver(driverDTO);
+
+                        logger.info("Driver info set successfully for booking {} - Driver: {}, Phone: {}",
+                                schedulingBooking.getId(),
+                                vendorDriver.getDriverName(),
+                                vendorDriver.getContactNo());
+                    } else {
+                        logger.warn("VendorDriver API returned null for ID: {}", schedulingBooking.getVendorDriverId());
+                        schedulingBookingDTO.setVendorDriver(null);
+                    }
+                } catch (Exception e) {
+                    logger.error("Error fetching vendorDriver for ID: {} - {}", schedulingBooking.getVendorDriverId(), e.getMessage());
+                    schedulingBookingDTO.setVendorDriver(null);
+                }
+            } else {
+                logger.info("No vendorDriverId found for booking {} (vendorDriverId: {})",
+                        schedulingBooking.getId(), schedulingBooking.getVendorDriverId());
+                schedulingBookingDTO.setVendorDriver(null);
+            }
+
+            // Handle User
+            if (schedulingBooking.getCarRentalUserId() != 0) {
+                try {
+                    String userServiceUrl = "https://api.worldtriplink.com/auth/getCarRentalUserById/" + schedulingBooking.getCarRentalUserId();
+                    logger.info("Calling user API: {}", userServiceUrl);
+                    CarRentalUser user = restTemplate.getForObject(userServiceUrl, CarRentalUser.class);
+
+                    if (user != null) {
+                        UserDTO userDTO = new UserDTO();
+                        userDTO.setId(user.getId());
+                        userDTO.setUserName(user.getUserName());
+                        userDTO.setLastName(user.getLastName());
+                        userDTO.setEmail(user.getEmail());
+                        userDTO.setGender(user.getGender());
+                        userDTO.setPhone(user.getPhone());
+                        schedulingBookingDTO.setUser(userDTO);
+
+                        logger.info("User info set successfully for booking {} - User: {}, Phone: {}",
+                                schedulingBooking.getId(),
+                                user.getUserName(),
+                                user.getPhone());
+                    } else {
+                        logger.warn("User API returned null for ID: {}", schedulingBooking.getCarRentalUserId());
+                        schedulingBookingDTO.setUser(null);
+                    }
+                } catch (Exception e) {
+                    logger.error("Error fetching user for ID: {} - {}", schedulingBooking.getCarRentalUserId(), e.getMessage());
+                    schedulingBookingDTO.setUser(null);
+                }
+            } else {
+                logger.info("No carRentalUserId found for booking {} (carRentalUserId: {})",
+                        schedulingBooking.getId(), schedulingBooking.getCarRentalUserId());
+                schedulingBookingDTO.setUser(null);
+            }
+
+            // Handle Scheduled Dates
+            List<ScheduleDateBookingDTO> scheduledDateDTOs = schedulingBooking.getScheduledDates().stream().map(sd -> {
+                ScheduleDateBookingDTO sdDTO = new ScheduleDateBookingDTO();
+                sdDTO.setId(sd.getId());
+                sdDTO.setDate(sd.getDate());
+                sdDTO.setSlotId(sd.getSlotId());
+                sdDTO.setStatus(sd.getStatus()); // Make sure status is set
+                return sdDTO;
+            }).collect(Collectors.toList());
             schedulingBookingDTO.setScheduledDates(scheduledDateDTOs);
 
             dtoList.add(schedulingBookingDTO);
@@ -1570,8 +1741,133 @@ public class ScheduleBookingService {
     /**
      * Clear location cache (for maintenance)
      */
+    
     public void clearLocationCache() {
         locationValidationService.clearCache();
         logger.info("Location validation cache cleared");
     }
+
+
+
+    // --------------------------------------------------------
+
+    // Assign Vendor Cab
+    
+    public SchedulingBooking assignVendorCabToBooking(int bookingId, int vendorCabId) {
+        SchedulingBooking booking = scheduleBookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found with ID: " + bookingId));
+
+        String vendorCabUrl = "https://api.worldtriplink.com/vendorsCab/" + vendorCabId;
+        try {
+            restTemplate.getForObject(vendorCabUrl, VendorCab.class);
+            booking.setVendorCabId(vendorCabId);
+            return scheduleBookingRepository.save(booking);
+        } catch (HttpClientErrorException.NotFound e) {
+            throw new RuntimeException("Vendor Cab not found with ID: " + vendorCabId);
+        }
+    }
+
+    // ---------------------By vendor
+
+    public List<SchedulingBookingDTO> getBookingByVendorId(int vendorId) {
+
+        List<SchedulingBooking> bookings = this.scheduleBookingRepository.findByVendorId(vendorId);
+        List<SchedulingBookingDTO> dtoList = new ArrayList<>();
+
+        for (SchedulingBooking schedulingBooking : bookings) {
+            SchedulingBookingDTO schedulingBookingDTO = new SchedulingBookingDTO();
+            schedulingBookingDTO.setId(schedulingBooking.getId());
+            schedulingBookingDTO.setPickUpLocation(schedulingBooking.getPickUpLocation());
+            schedulingBookingDTO.setDropLocation(schedulingBooking.getDropLocation());
+            schedulingBookingDTO.setTime(schedulingBooking.getTime());
+            schedulingBookingDTO.setReturnTime(schedulingBooking.getReturnTime());
+            schedulingBookingDTO.setShiftTime(schedulingBooking.getShiftTime());
+            schedulingBookingDTO.setBookingType(schedulingBooking.getBookingType());
+
+            try {
+                String vendorServiceUrl = "https://api.worldtriplink.com/vendors/" + schedulingBooking.getVendorId();
+                Vendor vendor = restTemplate.getForObject(vendorServiceUrl, Vendor.class);
+                if (vendor != null) {
+                    VendorDTO vendorDTO = new VendorDTO();
+                    vendorDTO.setId(vendor.getId());
+                    vendorDTO.setVendorCompanyName(vendor.getVendorCompanyName());
+                    vendorDTO.setContactNo(vendor.getContactNo());
+                    vendorDTO.setAlternateMobileNo(vendor.getAlternateMobileNo());
+                    vendorDTO.setCity(vendor.getCity());
+                    vendorDTO.setVendorEmail(vendor.getVendorEmail());
+                    schedulingBookingDTO.setVendor(vendorDTO);
+                }
+            } catch (Exception e) {
+                System.out.println("Vendor not found for ID: " + schedulingBooking.getVendorId());
+                schedulingBookingDTO.setVendor(null);
+            }
+
+            try {
+                String vendorDriverServiceUrl = "https://api.worldtriplink.com/vendorDriver/" + schedulingBooking.getVendorDriverId();
+                VendorDriver vendorDriver = restTemplate.getForObject(vendorDriverServiceUrl, VendorDriver.class);
+                if (vendorDriver != null) {
+                    VendorDriverDTO driverDTO = new VendorDriverDTO();
+                    driverDTO.setVendorDriverId(vendorDriver.getVendorDriverId());
+                    driverDTO.setDriverName(vendorDriver.getDriverName());
+                    driverDTO.setContactNo(vendorDriver.getContactNo());
+                    driverDTO.setAltContactNo(vendorDriver.getAltContactNo());
+                    schedulingBookingDTO.setVendorDriver(driverDTO);
+                }
+            } catch (Exception e) {
+                System.out.println("VendorDriver not found for ID: " + schedulingBooking.getVendorDriverId());
+                schedulingBookingDTO.setVendorDriver(null);
+            }
+
+            if (schedulingBooking.getCarRentalUserId() != 0) {
+                try {
+                    String userServiceUrl = "https://api.worldtriplink.com/auth/getCarRentalUserById/" + schedulingBooking.getCarRentalUserId();
+                    logger.info("Calling user API: {}", userServiceUrl);
+                    CarRentalUser user = restTemplate.getForObject(userServiceUrl, CarRentalUser.class);
+
+                    if (user != null) {
+                        UserDTO userDTO = new UserDTO();
+                        userDTO.setId(user.getId());
+                        userDTO.setUserName(user.getUserName());
+                        userDTO.setLastName(user.getLastName());
+                        userDTO.setEmail(user.getEmail());
+                        userDTO.setGender(user.getGender());
+                        userDTO.setPhone(user.getPhone());
+                        schedulingBookingDTO.setUser(userDTO);
+
+                        logger.info("User info set successfully for booking {} - User: {}, Phone: {}",
+                                schedulingBooking.getId(),
+                                user.getUserName(),
+                                user.getPhone());
+                    } else {
+                        logger.warn("User API returned null for ID: {}", schedulingBooking.getCarRentalUserId());
+                        schedulingBookingDTO.setUser(null);
+                    }
+                } catch (Exception e) {
+                    logger.error("Error fetching user for ID: {} - {}", schedulingBooking.getCarRentalUserId(), e.getMessage());
+                    schedulingBookingDTO.setUser(null);
+                }
+            } else {
+                logger.info("No carRentalUserId found for booking {} (carRentalUserId: {})",
+                        schedulingBooking.getId(), schedulingBooking.getCarRentalUserId());
+                schedulingBookingDTO.setUser(null);
+            }
+
+            List<ScheduleDateBookingDTO> scheduledDateDTOs = schedulingBooking.getScheduledDates().stream().map(sd -> {
+                ScheduleDateBookingDTO sdDTO = new ScheduleDateBookingDTO();
+                sdDTO.setId(sd.getId());
+                sdDTO.setDate(sd.getDate());
+                return sdDTO;
+            }).toList();
+            schedulingBookingDTO.setScheduledDates(scheduledDateDTOs);
+
+            dtoList.add(schedulingBookingDTO);
+        }
+
+        return dtoList;
+    }
+
+
+
 }
+
+

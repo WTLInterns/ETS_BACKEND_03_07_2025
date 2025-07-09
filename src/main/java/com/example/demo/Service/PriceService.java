@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Optional;
 
 import org.cloudinary.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Service;
 
 import com.example.demo.Model.Price;
 import com.example.demo.Repository.PriceRepository;
+
+import jakarta.persistence.EntityNotFoundException;
 
 @Service
 public class PriceService {
@@ -64,7 +67,8 @@ public class PriceService {
         price.setPickupLocation(pickupLocation);
         price.setDropLocation(dropLocation);
         return price;
-    } else {
+    } 
+    else {
         Price defaultPrice = new Price();
         defaultPrice.setSourceCity(sourceCity);
         defaultPrice.setSourceState(sourceState);
@@ -127,5 +131,31 @@ private double getDistanceInKm(String pickupLocation, String dropLocation) {
     }
 }
     
+public Price updateEtsTripprice(int id, String sourceState, String destinationState, String sourceCity,
+        String destinationCity, int hatchbackPrice, int sedanPrice, int sedanPremiumPrice, int suvPrice,
+        int suvPlusPrice, String status) {
+
+    Optional<Price> optionalPrice = priceRepository.findById(id);
+    
+    if (!optionalPrice.isPresent()) {
+        throw new EntityNotFoundException("Price record with ID " + id + " not found");
+    }
+
+    Price existingPrice = optionalPrice.get();
+
+    existingPrice.setSourceState(sourceState);
+    existingPrice.setDesitnationState(destinationState); 
+    existingPrice.setSourceCity(sourceCity);
+    existingPrice.setDestinationCity(destinationCity);
+    existingPrice.setHatchback(hatchbackPrice);
+    existingPrice.setSedan(sedanPrice);
+    existingPrice.setSedanpremium(sedanPremiumPrice);
+    existingPrice.setSuv(suvPrice);
+    existingPrice.setSuvplus(suvPlusPrice);
+    existingPrice.setStatus(status); 
+
+    return priceRepository.save(existingPrice);
+}
+
 
 }

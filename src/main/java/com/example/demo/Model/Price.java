@@ -5,7 +5,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
 
 @Entity
 @Table(name = "prices")
@@ -25,16 +24,21 @@ public class Price {
     private String cabType;
     
     // Additional fields needed for the application
-    @Transient
+    
     private String pickupLocation;
-    @Transient
+  
     private String dropLocation;
-    @Transient
+ 
     private int hatchback;
-    @Transient
+  
     private int sedan;
-    @Transient
+   
     private int suv;
+   
+    private int sedanpremium;
+   
+    private int suvplus;
+    private String status;
     
     // Default constructor
     public Price() {
@@ -186,4 +190,30 @@ public class Price {
                 ", suv=" + suv +
                 '}';
     }
+
+    public int getSedanpremium() {
+        return sedanpremium;
+    }
+
+    public void setSedanpremium(int sedanpremium) {
+        this.sedanpremium = sedanpremium;
+    }
+
+    public int getSuvplus() {
+        return suvplus;
+    }
+
+    public void setSuvplus(int suvplus) {
+        this.suvplus = suvplus;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+
 }

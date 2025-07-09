@@ -38,6 +38,11 @@ public class SchedulingBooking {
     @Transient
     private Vendor vendor;
 
+    @Transient
+    private VendorCab vendorCab;
+
+    private int vendorCabId;
+
     private String baseAmount;
 
     private String finalAmount;
@@ -83,13 +88,15 @@ public class SchedulingBooking {
     public SchedulingBooking(int id, String pickUpLocation, String dropLocation, String time, String returnTime,
                              Long vendorId, int vendorDriverId, Vendor vendor, String baseAmount, String finalAmount,
                              String serviceCharge, String gst, VendorDriver vendorDriver, String shiftTime, List<LocalDate> dateOfList,
-                             String bookingType, CarRentalUser carRentaluser, List<ScheduledDate> scheduledDates, String cabType, String distance, int sittingExcepatation, String bookId, int partnerSharing, String status, int carRentalUserId, String slotId ) {
+                             String bookingType, CarRentalUser carRentaluser, List<ScheduledDate> scheduledDates, String cabType, String distance, int sittingExcepatation, String bookId, int partnerSharing, String status, int carRentalUserId, String slotId,VendorCab vendorCab, int vendorCabId ) {
         this.id = id;
         this.pickUpLocation = pickUpLocation;
         this.dropLocation = dropLocation;
         this.status=status;
         this.time = time;
         this.returnTime = returnTime;
+        this.vendorCab=vendorCab;
+        this.vendorCabId=vendorCabId;
         this.vendorId = vendorId;
         this.vendorDriverId = vendorDriverId;
         this.vendor = vendor;
@@ -333,6 +340,24 @@ public class SchedulingBooking {
 
     public void setCarRentaluser(CarRentalUser carRentaluser) {
         this.carRentaluser = carRentaluser;
+    }
+
+    
+
+    public VendorCab getVendorCab() {
+        return vendorCab;
+    }
+
+    public void setVendorCab(VendorCab vendorCab) {
+        this.vendorCab = vendorCab;
+    }
+
+    public int getVendorCabId() {
+        return vendorCabId;
+    }
+
+    public void setVendorCabId(int vendorCabId) {
+        this.vendorCabId = vendorCabId;
     }
 
     @Override

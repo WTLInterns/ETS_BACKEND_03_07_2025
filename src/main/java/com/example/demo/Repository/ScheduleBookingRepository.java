@@ -15,6 +15,9 @@ public interface ScheduleBookingRepository extends JpaRepository<SchedulingBooki
     List<SchedulingBooking> findByVendorDriverId(int vendorDriverId);
     List<SchedulingBooking> findBySlotId(String slotId);
     List<SchedulingBooking> findByCarRentalUserId(int carRentalUserId);
+        List<SchedulingBooking> findByVendorId(int vendorId);
+
+
     long countBySlotIdAndCabType(String slotId, String cabType);
 
     List<SchedulingBooking> findByVendorDriverIdAndSlotId(int vendorDriverId, String slotId);

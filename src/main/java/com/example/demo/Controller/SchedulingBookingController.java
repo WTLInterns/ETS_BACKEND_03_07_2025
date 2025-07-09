@@ -6,11 +6,11 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-import com.example.demo.DTO.DriverSlotsResponseDTO;
-import com.example.demo.DTO.MultiDateAssignmentResponseDTO;
-import com.example.demo.Service.Location.LocationValidationResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -24,14 +24,17 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
+import com.example.demo.DTO.DriverSlotsResponseDTO;
+import com.example.demo.DTO.MultiDateAssignmentResponseDTO;
 import com.example.demo.DTO.SchedulingBookingDTO;
+import com.example.demo.Model.CarRentalUser;
 import com.example.demo.Model.Price;
 import com.example.demo.Model.ScheduledDate;
 import com.example.demo.Model.SchedulingBooking;
-import com.example.demo.Model.CarRentalUser;
 import com.example.demo.Repository.ScheduleBookingRepository;
 import com.example.demo.Service.EmailService;
 import com.example.demo.Service.GeocodingService;
+import com.example.demo.Service.Location.LocationValidationResult;
 import com.example.demo.Service.PriceService;
 import com.example.demo.Service.ScheduleBookingService;
 
@@ -133,6 +136,21 @@ public class SchedulingBookingController {
         return this.scheduleBookingService.getBookingByVendorDriverId(vendorDriverId);
     }
 
+    @GetMapping("/byVendorId/{vendorId}")
+    public List<SchedulingBookingDTO> getByVendorId(@PathVariable int vendorId) {
+        return this.scheduleBookingService.getBookingByVendorId(vendorId);
+    }
+
+    @GetMapping("/getAllBookings")
+    public ResponseEntity<List<SchedulingBookingDTO>> getAllBookings() {
+        try {
+            List<SchedulingBookingDTO> bookings = this.scheduleBookingService.getAllBookings();
+            return ResponseEntity.ok(bookings);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ArrayList<>());
+        }
+    }
+
     @PutMapping("/update-status/{userId}")
     public ResponseEntity<?> updateStatus(
             @PathVariable int userId,
@@ -175,6 +193,8 @@ public class SchedulingBookingController {
         } 
     }
 
+
+
     @PostMapping("/etsCab1")
         public Map<String, Object> getCabChoose(@RequestParam String pickUpLocation, @RequestParam String dropLocation,
                                             @RequestParam String time, @RequestParam(required = false) String returnTime, @RequestParam String shiftTime, @RequestParam List<LocalDate> dates) {
@@ -187,6 +207,8 @@ public class SchedulingBookingController {
                     pickUpLocation,
                     dropLocation
             );
+
+
 
             if (!locationResult.isValid()) {
                 response.put("status", "error");
@@ -409,6 +431,7 @@ public class SchedulingBookingController {
 
         scheduleBookingRepository.save(booking);
 
+
         String subject = "Booking Confirmation - ETS";
         String message = buildBookingConfirmationEmail(booking);
         boolean emailSent = emailService.sendEmail(message, subject, user.getEmail());
@@ -488,7 +511,7 @@ public class SchedulingBookingController {
                 .append("</div>")
                 .append("</body></html>");
         return emailContent.toString();
-    }
+    } 
 
 
 
@@ -511,4 +534,15 @@ public class SchedulingBookingController {
 //     public SchedulingBooking assignVendorDriver(@PathVariable int vendorDriverId, @PathVariable int bookingId){
 // return this.scheduleBookingService.assignDriverBooking(bookingId, vendorDriverId);
 //     }
+
+
+@PutMapping("assignCab/{bookingId}/{vendorCabId}")
+public SchedulingBooking assignVendorCab(@PathVariable int bookingId, @PathVariable int vendorCabId){
+return this.scheduleBookingService.assignVendorCabToBooking(bookingId, vendorCabId);
+}
+
+
+
+
+
 }
