@@ -4,11 +4,17 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-import jakarta.persistence.*;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
-import jakarta.annotation.Generated;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Transient;
 
 @Entity
 public class SchedulingBooking {
@@ -41,7 +47,17 @@ public class SchedulingBooking {
     @Transient
     private VendorCab vendorCab;
 
+    @Transient
+    private AdminDriver adminDriver;
+
+    @Transient
+    private AdminCab adminCab;
+
     private int vendorCabId;
+
+    private int driverAdmin;
+
+    private Long cabAdmin;
 
     private String baseAmount;
 

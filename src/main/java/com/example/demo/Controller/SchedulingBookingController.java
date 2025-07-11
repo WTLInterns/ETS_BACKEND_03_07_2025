@@ -45,14 +45,11 @@ public class SchedulingBookingController {
     @Autowired
     private ScheduleBookingService scheduleBookingService;
 
-
-
     @Autowired
     private GeocodingService geocodingService;
 
     @Autowired
     private PriceService priceService;
-
 
     @Autowired
     private ScheduleBookingRepository scheduleBookingRepository;
@@ -111,7 +108,8 @@ public class SchedulingBookingController {
             @PathVariable int bookingId,
             @PathVariable int vendorDriverId) {
 
-        MultiDateAssignmentResponseDTO response = scheduleBookingService.assignDriverBookingWithResponse(bookingId, vendorDriverId);
+        MultiDateAssignmentResponseDTO response = scheduleBookingService.assignDriverBookingWithResponse(bookingId,
+                vendorDriverId);
 
         if (response.isOverallSuccess()) {
             return ResponseEntity.ok(response);
@@ -187,17 +185,16 @@ public class SchedulingBookingController {
             return ResponseEntity.badRequest().body(new DriverSlotsResponseDTO(new ArrayList<>()));
 
         } catch (Exception e) {
-//            logger.error("Error in getDriverSlots: {}", e.getMessage());
+            // logger.error("Error in getDriverSlots: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new DriverSlotsResponseDTO(new ArrayList<>()));
-        } 
+        }
     }
 
-
-
     @PostMapping("/etsCab1")
-        public Map<String, Object> getCabChoose(@RequestParam String pickUpLocation, @RequestParam String dropLocation,
-                                            @RequestParam String time, @RequestParam(required = false) String returnTime, @RequestParam String shiftTime, @RequestParam List<LocalDate> dates) {
+    public Map<String, Object> getCabChoose(@RequestParam String pickUpLocation, @RequestParam String dropLocation,
+            @RequestParam String time, @RequestParam(required = false) String returnTime,
+            @RequestParam String shiftTime, @RequestParam List<LocalDate> dates) {
 
         Map<String, Object> response = new HashMap<>();
 
@@ -205,10 +202,7 @@ public class SchedulingBookingController {
             // Use production-ready location validation
             LocationValidationResult locationResult = scheduleBookingService.validatePickupAndDropLocations(
                     pickUpLocation,
-                    dropLocation
-            );
-
-
+                    dropLocation);
 
             if (!locationResult.isValid()) {
                 response.put("status", "error");
@@ -224,7 +218,6 @@ public class SchedulingBookingController {
 
                 return response;
             }
-
 
             DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
             try {
@@ -273,25 +266,21 @@ public class SchedulingBookingController {
         }
     }
 
-
     @PostMapping("/cabFinder")
     public Map<String, Object> findCabOverDetails(@RequestParam String pickUpLocation,
-                                                  @RequestParam String dropLocation,
-                                                  @RequestParam String time,
-                                                  @RequestParam String returnTime,
-                                                  @RequestParam String shiftTime,
-                                                  @RequestParam String distance,
-                                                  @RequestParam String hatchback,
-                                                  @RequestParam String sedan,
-                                                  @RequestParam String suv) {
+            @RequestParam String dropLocation,
+            @RequestParam String time,
+            @RequestParam String returnTime,
+            @RequestParam String shiftTime,
+            @RequestParam String distance,
+            @RequestParam String hatchback,
+            @RequestParam String sedan,
+            @RequestParam String suv) {
 
         Map<String, Object> response = new HashMap<>();
 
         double totalDistance = Double.parseDouble(distance);
         double baseFare = 220.0;
-
-
-
 
         double hatchbackRate = Double.parseDouble(hatchback);
         double sedanRate = Double.parseDouble(sedan);
@@ -349,8 +338,6 @@ public class SchedulingBookingController {
         return response;
     }
 
-
-
     @PostMapping("/etsBookingConfirm")
     public Map<String, Object> confirmBooking(
             @RequestParam(required = false) String pickUpLocation,
@@ -368,20 +355,22 @@ public class SchedulingBookingController {
 
         Map<String, Object> response = new HashMap<>();
 
-//        ScheduleBookingService.LocationValidationResult locationResult =
-//                scheduleBookingService.validatePickupAndDropLocations(pickUpLocation, dropLocation);
-//
-//        if (!locationResult.isValid()) {
-//            response.put("status", "error");
-//            response.put("message", locationResult.getErrorMessage());
-//            response.put("errorCode", locationResult.getErrorCode());
-//
-//            if (locationResult.getSuggestions() != null && !locationResult.getSuggestions().isEmpty()) {
-//                response.put("suggestions", locationResult.getSuggestions());
-//            }
-//
-//            return response;
-//        }
+        // ScheduleBookingService.LocationValidationResult locationResult =
+        // scheduleBookingService.validatePickupAndDropLocations(pickUpLocation,
+        // dropLocation);
+        //
+        // if (!locationResult.isValid()) {
+        // response.put("status", "error");
+        // response.put("message", locationResult.getErrorMessage());
+        // response.put("errorCode", locationResult.getErrorCode());
+        //
+        // if (locationResult.getSuggestions() != null &&
+        // !locationResult.getSuggestions().isEmpty()) {
+        // response.put("suggestions", locationResult.getSuggestions());
+        // }
+        //
+        // return response;
+        // }
 
         if (userId == null) {
             response.put("status", "error");
@@ -418,7 +407,7 @@ public class SchedulingBookingController {
         String userServiceUrl = "https://api.worldtriplink.com/auth/getCarRentalUserById/" + userId;
         System.out.println("Calling URL: " + userServiceUrl);
         CarRentalUser user = restTemplate.getForObject(userServiceUrl, CarRentalUser.class);
-        System.out.println("USER"+user);
+        System.out.println("USER" + user);
         if (user == null) {
             System.out.println("RestTemplate returned null - service might be down or user not found");
 
@@ -430,7 +419,6 @@ public class SchedulingBookingController {
         booking.setCarRentalUserId(userId);
 
         scheduleBookingRepository.save(booking);
-
 
         String subject = "Booking Confirmation - ETS";
         String message = buildBookingConfirmationEmail(booking);
@@ -450,7 +438,8 @@ public class SchedulingBookingController {
 
     private String buildBookingConfirmationEmail(SchedulingBooking booking) {
         StringBuilder emailContent = new StringBuilder();
-        emailContent.append("<html><body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;'>")
+        emailContent.append(
+                "<html><body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;'>")
                 .append("<div style='background-color: #f8f9fa; padding: 20px; border-radius: 5px;'>")
                 .append("<h2 style='color: #2c3e50; margin-top: 0;'>Booking Confirmation</h2>")
                 // .append("<p>Dear " + booking.getUser().getUserName() + ",</p>")
@@ -511,38 +500,32 @@ public class SchedulingBookingController {
                 .append("</div>")
                 .append("</body></html>");
         return emailContent.toString();
-    } 
-
-
-
-
+    }
 
     @GetMapping("/getId/{id}")
-    public SchedulingBookingDTO getById(@PathVariable int id){
+    public SchedulingBookingDTO getById(@PathVariable int id) {
         return this.scheduleBookingService.getByScheduleBookingId(id);
     }
 
     // @GetMapping("/coordinates")
-    // public ResponseEntity<Map<String, Double>> getCoordinates(@RequestParam String address) {
-    //     Map<String, Double> coords = geocodingService.getLatLngFromAddress(address);
-    //     return ResponseEntity.ok(coords);
+    // public ResponseEntity<Map<String, Double>> getCoordinates(@RequestParam
+    // String address) {
+    // Map<String, Double> coords = geocodingService.getLatLngFromAddress(address);
+    // return ResponseEntity.ok(coords);
     // }
 
+    // @PutMapping("/{bookingId}/assignVendorDriver/{vendorDriverId}")
+    // public SchedulingBooking assignVendorDriver(@PathVariable int vendorDriverId,
+    // @PathVariable int bookingId){
+    // return this.scheduleBookingService.assignDriverBooking(bookingId,
+    // vendorDriverId);
+    // }
 
+    
 
-//     @PutMapping("/{bookingId}/assignVendorDriver/{vendorDriverId}")
-//     public SchedulingBooking assignVendorDriver(@PathVariable int vendorDriverId, @PathVariable int bookingId){
-// return this.scheduleBookingService.assignDriverBooking(bookingId, vendorDriverId);
-//     }
-
-
-@PutMapping("assignCab/{bookingId}/{vendorCabId}")
-public SchedulingBooking assignVendorCab(@PathVariable int bookingId, @PathVariable int vendorCabId){
-return this.scheduleBookingService.assignVendorCabToBooking(bookingId, vendorCabId);
-}
-
-
-
-
+    @PutMapping("assignCab/{bookingId}/{vendorCabId}")
+    public SchedulingBooking assignVendorCab(@PathVariable int bookingId, @PathVariable int vendorCabId) {
+        return this.scheduleBookingService.assignVendorCabToBooking(bookingId, vendorCabId);
+    }
 
 }
