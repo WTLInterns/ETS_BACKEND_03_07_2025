@@ -199,6 +199,9 @@ public class SchedulingBookingController {
         Map<String, Object> response = new HashMap<>();
 
         try {
+            // Calculate the number of selected dates
+            int selectedDaysCount = (dates != null) ? dates.size() : 0;
+
             // Use production-ready location validation
             LocationValidationResult locationResult = scheduleBookingService.validatePickupAndDropLocations(
                     pickUpLocation,
@@ -257,6 +260,7 @@ public class SchedulingBookingController {
             response.put("suv", price.getSuv());
             response.put("distance", price.getDistance());
             response.put("dates", dates);
+            response.put("selectedDaysCount", selectedDaysCount);
             return response;
         } catch (Exception e) {
             response.put("status", "error");
@@ -355,6 +359,9 @@ public class SchedulingBookingController {
 
         Map<String, Object> response = new HashMap<>();
 
+        // Calculate the number of selected dates
+        int selectedDaysCount = (dates != null) ? dates.size() : 0;
+
         // ScheduleBookingService.LocationValidationResult locationResult =
         // scheduleBookingService.validatePickupAndDropLocations(pickUpLocation,
         // dropLocation);
@@ -428,9 +435,11 @@ public class SchedulingBookingController {
             response.put("status", "success");
             response.put("message", "Booking confirmed successfully. Confirmation email sent.");
             response.put("bookingId", booking.getId());
+            response.put("selectedDaysCount", selectedDaysCount);
         } else {
             response.put("status", "error");
             response.put("message", "Booking confirmed, but email sending failed.");
+            response.put("selectedDaysCount", selectedDaysCount);
         }
 
         return response;

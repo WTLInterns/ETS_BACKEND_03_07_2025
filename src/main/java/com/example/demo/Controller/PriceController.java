@@ -17,9 +17,9 @@ import jakarta.persistence.EntityNotFoundException;
 
 @RestController
 public class PriceController {
-    
-@Autowired
-private PriceService priceService;
+
+    @Autowired
+    private PriceService priceService;
 
     @PostMapping("/find")
     public Price getPrice(@RequestParam String pickupLocation, @RequestParam String dropLocation) {
@@ -42,21 +42,51 @@ private PriceService priceService;
 
         try {
             Price updatedPrice = priceService.updateEtsTripprice(
-                id,
-                sourceState,
-                destinationState,
-                sourceCity,
-                destinationCity,
-                hatchbackPrice,
-                sedanPrice,
-                sedanPremiumPrice,
-                suvPrice,
-                suvPlusPrice,
-                status
-            );
+                    id,
+                    sourceState,
+                    destinationState,
+                    sourceCity,
+                    destinationCity,
+                    hatchbackPrice,
+                    sedanPrice,
+                    sedanPremiumPrice,
+                    suvPrice,
+                    suvPlusPrice,
+                    status);
             return ResponseEntity.ok(updatedPrice);
         } catch (EntityNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @PostMapping("/createPrice")
+    public ResponseEntity<Price> createPrice(
+            @RequestParam String sourceState,
+            @RequestParam String destinationState,
+            @RequestParam String sourceCity,
+            @RequestParam String destinationCity,
+            @RequestParam int hatchbackPrice,
+            @RequestParam int sedanPrice,
+            @RequestParam int sedanPremiumPrice,
+            @RequestParam int suvPrice,
+            @RequestParam int suvPlusPrice,
+            @RequestParam String status) {
+
+        try {
+            Price createdPrice = priceService.createEtsTripprice(
+                    sourceState,
+                    destinationState,
+                    sourceCity,
+                    destinationCity,
+                    hatchbackPrice,
+                    sedanPrice,
+                    sedanPremiumPrice,
+                    suvPrice,
+                    suvPlusPrice,
+                    status);
+            return ResponseEntity.ok(createdPrice);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }

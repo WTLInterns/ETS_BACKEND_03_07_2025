@@ -78,6 +78,8 @@ public class PriceService {
         defaultPrice.setHatchback(15);
         defaultPrice.setSedan(17);
         defaultPrice.setSuv(22);
+        defaultPrice.setSedanpremium(20);
+        defaultPrice.setSuvplus(25);
         defaultPrice.setDistance(distanceInKm);
         defaultPrice.setPickupLocation(pickupLocation);
         defaultPrice.setDropLocation(dropLocation);
@@ -157,5 +159,28 @@ public Price updateEtsTripprice(int id, String sourceState, String destinationSt
     return priceRepository.save(existingPrice);
 }
 
+
+
+
+
+public Price createEtsTripprice( String sourceState, String destinationState, String sourceCity,
+        String destinationCity, int hatchbackPrice, int sedanPrice, int sedanPremiumPrice, int suvPrice,
+        int suvPlusPrice, String status) {
+
+    Price existingPrice = new Price();
+
+    existingPrice.setSourceState(sourceState);
+    existingPrice.setDesitnationState(destinationState); 
+    existingPrice.setSourceCity(sourceCity);
+    existingPrice.setDestinationCity(destinationCity);
+    existingPrice.setHatchback(hatchbackPrice);
+    existingPrice.setSedan(sedanPrice);
+    existingPrice.setSedanpremium(sedanPremiumPrice);
+    existingPrice.setSuv(suvPrice);
+    existingPrice.setSuvplus(suvPlusPrice);
+    existingPrice.setStatus(status); 
+
+    return priceRepository.save(existingPrice);
+}
 
 }
