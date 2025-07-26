@@ -255,10 +255,9 @@ public class SchedulingBookingController {
             response.put("destinationCity", price.getDestinationCity());
             response.put("sourceState", price.getSourceState());
             response.put("sourceCity", price.getSourceCity());
-            response.put("hatchback", price.getHatchback());
-            response.put("sedan", price.getSedan());
-            response.put("suv", price.getSuv());
-            response.put("distance", price.getDistance());
+            response.put("hatchback", selectedDaysCount * price.getHatchback());
+            response.put("sedan", selectedDaysCount * price.getSedan());
+            response.put("suv", selectedDaysCount * price.getSuv());
             response.put("dates", dates);
             response.put("selectedDaysCount", selectedDaysCount);
             return response;
@@ -529,8 +528,6 @@ public class SchedulingBookingController {
     // return this.scheduleBookingService.assignDriverBooking(bookingId,
     // vendorDriverId);
     // }
-
-    
 
     @PutMapping("assignCab/{bookingId}/{vendorCabId}")
     public SchedulingBooking assignVendorCab(@PathVariable int bookingId, @PathVariable int vendorCabId) {
